@@ -1,0 +1,32 @@
+@font-face {
+    font-family: Vazir;
+    src: url('../fonts/Vazir-Regular.eot');
+    src: url('../fonts/Vazir-Regular.eot?#iefix') format('embedded-opentype'),
+         url('../fonts/Vazir-Regular.woff2') format('woff2'),
+         url('../fonts/Vazir-Regular.woff') format('woff'),
+         url('../fonts/Vazir-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-display:swap;
+}
+
+body{
+    font-family: Vazir;
+}
+
+.dashboard-content{
+    background-color: #fff;
+    padding-top: 50px;
+}
+
+.navbar-brand{
+    text-transform: none !important;
+}
+
+.swal2-title{
+    font-family: Vazir !important;
+}
+
+.toast-message{
+    direction: rtl;
+    text-align: right;
+}

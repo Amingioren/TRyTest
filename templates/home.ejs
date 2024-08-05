@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+ 
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="../assets/vendor/bootstrap/css/bootstrap.min.css">
+    <link href="../assets/vendor/fonts/circular-std/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/libs/css/style.css">
+    <link rel="stylesheet" href="css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="dashboard-main-wrapper">
+        <%- include('header.ejs') %>
+        <%- include('sidebar.ejs') %>
+        <div class="dashboard-wrapper">
+            <div class="container-fluid dashboard-content">
+                <div class="row">
+                    <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                        <table class="table table-bordered table-hover" id="tbl-filelist">
+                            <tr>
+                                <td>
+                                    <span class="fas fa-server"></span>
+                                    Server Status : <b id="server-status">Disconnect</b>
+                                </td>
+                                <td>
+                                    <span class="fas fa-mobile"></span>
+                                    Device Status : <b id="device-status">Disconnect</b>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <br>
+                        <h2>Device Information</h2>
+                        <ul class="nav nav-tabs">
+                            <li class="nav-item">
+                                <a class="nav-link active"  href="#box1" data-toggle="tab">Information</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link"  href="#box2" data-toggle="tab">Hardware</a>
+                            </li>
+                        </ul>
+                
+                        <div class="tab-content clearfix">
+                            <div class="tab-pane active" id="box1">
+                                <table class="table table-bordered table-hover" id="tbl1">
+                                </table>            
+                            </div>
+                            <div class="tab-pane" id="box2">
+                                <table class="table table-bordered table-hover" id="tbl2">
+                                </table>            
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <%- include('footer.ejs') %>
+        </div>
+    </div>
+    <script src="../assets/vendor/jquery/jquery-3.3.1.min.js"></script>
+    <script src="../assets/vendor/bootstrap/js/bootstrap.bundle.js"></script>
+    <script src="../assets/vendor/slimscroll/jquery.slimscroll.js"></script>
+    <script src="../assets/libs/js/main-js.js"></script>
+    <script src="js/socket.io.min.js"></script>
+    <script>
+        var serverStatus,deviceStatus,socket;
+        serverStatus = $('#server-status');
+        deviceStatus = $('#device-status');
+        $(document).ready(function(){
+            socket = io("<%= IO_URL %>?key=ac34c2c24de98e6b7a27fe4d90ec8374507821f6a967fcefc3cd9d96782f960e");
+            socket.on('connect',function(){
+                serverStatus.html('Connected');
+            });
+            socket.on('disconnect',function(){
+                serverStatus.html('Disconnect');
+            });
+            socket.on('connect_error',function(err){
+                console.log(err);
+            });  
+            socket.on('device_connect',function(){
+                console.log('device_connect');
+                deviceStatus.html('Connected');
+            });
+            socket.on('device_disconnect',function(){
+                console.log('device_disconnect');
+                deviceStatus.html('Disconnect');
+            });
+
+            socket.emit('checkDeviceStatus');
+
+
+            setInterval(()=>{
+                socket.emit('pingPong');
+            },1000);
+
+
+            socket.emit('deviceInfo_to_device');
+
+            socket.on('deviceInfo_to_web',function(data){
+                for(let key in data.getDeviceConfigInfo)
+                {   
+                    let tr = `
+                        <tr>
+                            <td>
+                                ${key} : <b>${data.getDeviceConfigInfo[key]}</b>
+                            </td>
+                        </tr>
+                    `;
+                    $('#tbl1').append(tr);
+                }
+                for(let key in data.getDeviceInfo)
+                {   
+                    let tr = `
+                        <tr>
+                            <td>
+                                ${key} : <b>${data.getDeviceInfo[key]}</b>
+                            </td>
+                        </tr>
+                    `;
+                    $('#tbl1').append(tr);
+                }
+                for(let key in data.getDeviceNetworkInfo)
+                {   
+                    let tr = `
+                        <tr>
+                            <td>
+                                ${key} : <b>${data.getDeviceNetworkInfo[key]}</b>
+                            </td>
+                        </tr>
+                    `;
+                    $('#tbl2').append(tr);
+                }
+                for(let key in data.getDeviceSimInfo)
+                {   
+                    let tr = `
+                        <tr>
+                            <td>
+                                ${key} : <b>${data.getDeviceSimInfo[key]}</b>
+                            </td>
+                        </tr>
+                    `;
+                    $('#tbl2').append(tr);
+                }
+
+
+
+                for(let key in data.getDeviceCpuInfo)
+                {   
+                    let tr = `
+                        <tr>
+                            <td>
+                                ${key} : <b>${data.getDeviceCpuInfo[key]}</b>
+                            </td>
+                        </tr>
+                    `;
+                    $('#tbl2').append(tr);
+                }
+                for(let key in data.getDeviceBatteryInfo)
+                {   
+                    let tr = `
+                        <tr>
+                            <td>
+                                ${key} : <b>${data.getDeviceBatteryInfo[key]}</b>
+                            </td>
+                        </tr>
+                    `;
+                    $('#tbl2').append(tr);
+                }
+                for(let key in data.getDeviceBluetoothInfo)
+                {   
+                    let tr = `
+                        <tr>
+                            <td>
+                                ${key} : <b>${data.getDeviceBluetoothInfo[key]}</b>
+                            </td>
+                        </tr>
+                    `;
+                    $('#tbl2').append(tr);
+                }
+                for(let key in data.getDeviceDisplayInfo)
+                {   
+                    let tr = `
+                        <tr>
+                            <td>
+                                ${key} : <b>${data.getDeviceDisplayInfo[key]}</b>
+                            </td>
+                        </tr>
+                    `;
+                    $('#tbl2').append(tr);
+                }
+
+
+
+
+
+
+            });
+
+        });
+    </script>
+</body>
+ 
+</html>

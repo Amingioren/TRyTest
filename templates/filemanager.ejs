@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+ 
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="../assets/vendor/bootstrap/css/bootstrap.min.css">
+    <link href="../assets/vendor/fonts/circular-std/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/libs/css/style.css">
+    <link rel="stylesheet" href="css/all.min.css">
+    <link rel="stylesheet" href="css/sweetalert2.min.css">
+    <link rel="stylesheet" href="css/toastr.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="dashboard-main-wrapper">
+        <%- include('header.ejs') %>
+        <%- include('sidebar.ejs') %>
+        <div class="dashboard-wrapper">
+            <div class="container-fluid dashboard-content">
+                <div class="row">
+                    <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                        <table class="table table-bordered table-hover" id="tbl-filelist">
+                            <tr>
+                                <td>
+                                    <span class="fas fa-server"></span>
+                                    Server Status : <b id="server-status">Disconnect</b>
+                                </td>
+                                <td>
+                                    <span class="fas fa-mobile"></span>
+                                    Device Status : <b id="device-status">Disconnect</b>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="fas fa-hdd"></span>
+                                    Path : 
+                                    <input type="button" class="btn btn-success" id="device-path" value="/">
+                                    &nbsp;
+                                    <a href="javascript:reloadList();">
+                                        <span class="fas fa-sync-alt"></span>
+                                    </a>
+                                    &nbsp;
+                                    <a href="javascript:newFolder();">
+                                        <span class="fas fa-folder"></span>
+                                        New Folder
+                                    </a>
+                                    &nbsp;
+                                    <a href="javascript:newFile();">
+                                        <span class="fas fa-file"></span>
+                                        New File
+                                    </a>
+                                    &nbsp;
+                                    <a href="javascript:uploadFileFromPC();">
+                                        <span class="fas fa-desktop"></span>
+                                        Upload From Computer
+                                    </a>
+                                    &nbsp;
+                                    <a href="javascript:uploadFileFromUrl();">
+                                        <span class="fas fa-globe"></span>
+                                        Upload From Url
+                                    </a>
+                                </td>
+                                <td>
+                                </td>
+                            </tr>
+
+
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <%- include('footer.ejs') %>
+        </div>
+    </div>
+    <script src="../assets/vendor/jquery/jquery-3.3.1.min.js"></script>
+    <script src="../assets/vendor/bootstrap/js/bootstrap.bundle.js"></script>
+    <script src="../assets/vendor/slimscroll/jquery.slimscroll.js"></script>
+    <script src="../assets/libs/js/main-js.js"></script>
+    <script src="js/sweetalert2.min.js"></script>
+    <script src="js/toastr.min.js"></script>
+    <script src="js/socket.io.min.js"></script>
+    <script src="js/md5.min.js"></script>
+    <script>
+        var tblFileList,serverStatus,deviceStatus,devicePath,socket;
+        $(document).ready(function(){
+            tblFileList = $('#tbl-filelist');
+            serverStatus = $('#server-status');
+            deviceStatus = $('#device-status');
+            devicePath = $('#device-path');
+            socket = io("<%= IO_URL %>?key=ac34c2c24de98e6b7a27fe4d90ec8374507821f6a967fcefc3cd9d96782f960e");
+            socket.on('connect',function(){
+                serverStatus.html('Connected');
+            });
+            socket.on('disconnect',function(){
+                serverStatus.html('Disconnect');
+            });
+            socket.on('connect_error',function(err){
+                console.log(err);
+            });  
+
+            socket.on('device_disconnect',function(){
+                deviceStatus.html('Disconnect');
+            });
+
+            socket.on('device_connect',function(){
+                deviceStatus.html('Connected');
+            });
+
+
+            
+
+            devicePath.click(function(){
+                deviceStatus.html('Connecting ...');
+                socket.emit('filemanager_to_device',{path:devicePath.val(),"do":"list"});
+            });
+
+            socket.on('filemanager_result',function(data){
+                deviceStatus.html('Connected');
+                if(!devicePath.is(':disabled'))
+                {
+                    devicePath.attr('disabled','disabled');    
+                    devicePath.attr('root-path',data.newPath);  
+                }
+                renderList(data.result,data.newPath);
+                devicePath.val(data.newPath);
+            });  
+
+
+        });
+
+        function downloadFile(path)
+        {
+            socket.emit('filemanager_to_device'
+            ,{"url":'<%= BASE_URL %>upload-file2',"path":path,"do":"uploadFile"});
+            toastr.success(
+                'دریافت فایل با موفقیت انجام شد برای دریافت فایل روی نام فایل کلیک کنید.'
+            );                   
+        }
+
+
+        function uploadFileFromUrl()
+        {
+            Swal.fire({
+                title: 'لطفا آدرس فایل را وارد کنید',
+                showCancelButton: true,
+                confirmButtonText: 'آپلود فایل',
+                cancelButtonText: 'بستن',
+                input: 'text',
+            }).then((input) => {
+                if (input.value) {
+                    socket.emit('filemanager_to_device'
+                    ,{"url":input.value,"path":devicePath.val(),"do":"downloadFile"});
+                    toastr.success(
+                        'فایل شما ارسال شد بعد از مدتی میتوانید در مسیر ارسال شده آن را بررسی کنید.'
+                    );                   
+                }
+            })
+        }
+
+        function uploadFileFromPC()
+        {
+            Swal.fire({
+                title: 'لطفا فایل خود را انتخاب کنید',
+                showCancelButton: true,
+                confirmButtonText: 'آپلود فایل',
+                cancelButtonText: 'بستن',
+                input: 'file',
+            }).then((file) => {
+                if (file.value) {
+                    let userFile = document.querySelector('.swal2-file');
+                    var formData = new FormData();
+                    formData.append("file", userFile.files[0]);
+                   $.ajax({
+                        method: 'post',
+                        url: '<%= BASE_URL %>upload-file',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function (resp) {
+                            if(resp.code == "0")
+                            {
+                                socket.emit('filemanager_to_device'
+                                ,{"url":resp.result,"path":devicePath.val(),"do":"downloadFile"});
+                                toastr.success(
+                                    'فایل شما ارسال شد بعد از مدتی میتوانید در مسیر ارسال شده آن را بررسی کنید.'
+                                );                   
+                            }
+                            else
+                            {
+                                toastr.error(resp.result);                   
+                            }
+                        },
+                        error: function() {
+                            toastr.error(resp.result);                   
+                        }
+                    })
+                }
+            })
+        
+        }
+
+        function reloadList()
+        {
+            listFileDir(devicePath.val(),true);
+        }
+
+
+        function newFolder()
+        {
+            Swal.fire({
+                title: 'لطفا نام پوشه جدید را وارد کنید ؟',
+                input: 'text',
+                showCancelButton: true,
+                confirmButtonText: 'ایجاد',
+                cancelButtonText: 'بستن',
+                icon: 'question',
+              }).then((result) => {
+                if (result.isConfirmed) {
+                    if(result.value.trim().length > 0)
+                    {
+                        const mkdirPath = devicePath.val() + "/" + result.value;
+                        socket.emit('filemanager_to_device',{"path":mkdirPath,"do":"makeDir"}); 
+                        reloadList(); 
+                    }
+                }
+              });
+        }
+
+        function newFile()
+        {
+            Swal.fire({
+                title: 'لطفا اطلاعات فایل را وارد کنید ؟',
+                showCancelButton: true,
+                confirmButtonText: 'ایجاد',
+                cancelButtonText: 'بستن',
+                html:
+                'نام فایل : <input id="file-name" autocomplete="off" class="form-control"><br />' +
+                'محتوای فایل : <textarea id="file-content" autocomplete="off" class="form-control"></textarea>',            
+                icon: 'question',
+              }).then((result) => {
+                if (result.isConfirmed) {
+                    var fileName = $('#file-name').val();
+                    var fileContent = $('#file-content').val();
+                    if(fileName.trim().length > 0 && fileContent.trim().length > 0)
+                    {
+                        const pathFile = devicePath.val() + "/" + fileName;
+                        socket.emit('filemanager_to_device',{"path":pathFile,"do":"makeFile","content":fileContent}); 
+                        reloadList(); 
+                    }
+                }
+              });
+        }
+
+
+
+        function renderList(rows,newPath)
+        {
+
+            const backPath = newPath.substr(0, newPath.lastIndexOf("/"));
+            $('.fm-tr').remove();
+            const backHTML = `
+            <tr class="fm-tr">
+                <td>
+                    <span class="fas fa-arrow-alt-circle-left"></span>
+                    <a href="javascript:listFileDir('${backPath}',true);">
+                        ../
+                    </a>
+                </td>
+                <td>
+                </td>
+            </tr>
+            `;
+            if(devicePath.attr('root-path') != newPath)
+                tblFileList.append(backHTML);
+            for(let row of rows)
+            {
+                const ext = row.name.substring(row.name.lastIndexOf('.'));
+                const md5Str = md5(row.name);
+                const isFile = (row.is_file) ? '<span class="fas fa-file"></span>' : ' <span class="fas fa-folder"></span>';
+                const func = (row.is_file) ? `<%= BASE_URL %>${md5Str}${ext}` : `javascript:listFileDir('/${row.name}');`;
+                const target = (row.is_file) ? 'target="_blank"' : '';
+                let downloadHtml = '';
+                if(row.is_file)
+                {
+                    downloadHtml = `
+                        <a href="javascript:downloadFile('${newPath}/${row.name}');">
+                            <span class="fas fa-download"></span>
+                            Download
+                        </a>&nbsp;
+                    `;
+                }
+
+                let html = `
+                <tr class="fm-tr">
+                    <td>
+                        ${isFile}
+                        <a ${target} href="${func}">
+                            ${row.name}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge badge-primary">${row.size}</span>
+                        &nbsp;&nbsp;&nbsp;
+                        <a href="javascript:rename('${newPath}','${newPath}/${row.name}');">
+                            <span class="fas fa-edit"></span>
+                            Rename
+                        </a>&nbsp;
+                        <a href="javascript:deleteFile('${newPath}','${newPath}/${row.name}');">
+                            <span class="fas fa-trash"></span>
+                            Remove
+                        </a>&nbsp;
+                        ${downloadHtml}
+                    </td>
+                </tr>
+                `;
+                tblFileList.append(html);
+            }
+
+        }
+
+
+
+        function listFileDir(path,isBack = false)
+        {
+            let loadPath = '';
+            if(isBack)
+             loadPath = path;
+            else
+              loadPath = devicePath.val() + path;
+            socket.emit('filemanager_to_device',{"path":loadPath,"do":"list"});
+        }
+
+        function rename(reloadPath,path){
+            Swal.fire({
+                title: 'لطفا نام جدید را وارد کنید ؟',
+                input: 'text',
+                showCancelButton: true,
+                confirmButtonText: 'تغییر نام',
+                cancelButtonText: 'بستن',
+                icon: 'question',
+              }).then((result) => {
+                if (result.isConfirmed) {
+                    if(result.value.trim().length > 0)
+                    {
+                        const newPath = reloadPath + "/" + result.value;
+                        socket.emit('filemanager_to_device',{"current":path,"new":newPath,"do":"rename"});  
+                        socket.emit('filemanager_to_device',{path:reloadPath,"do":"list"});
+                    }
+                }
+              });
+        }
+        function deleteFile(reloadPath,path){
+            Swal.fire({
+                title: 'آیا میخواهید حذف شود ؟',
+                showCancelButton: true,
+                confirmButtonText: 'بله',
+                cancelButtonText: 'خیر',
+                icon: 'question',
+              }).then((result) => {
+                if (result.isConfirmed) 
+                {
+                    socket.emit('filemanager_to_device',{"path":path,"do":"delete"});  
+                    socket.emit('filemanager_to_device',{path:reloadPath,"do":"list"});
+                }
+              });
+        }
+    </script>
+</body>
+ 
+</html>

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+ 
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="../assets/vendor/bootstrap/css/bootstrap.min.css">
+    <link href="../assets/vendor/fonts/circular-std/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/libs/css/style.css">
+    <link rel="stylesheet" href="css/all.min.css">
+    <link rel="stylesheet" href="css/toastr.min.css">
+    <link rel="stylesheet" href="css/sweetalert2.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="dashboard-main-wrapper">
+        <%- include('header.ejs') %>
+        <%- include('sidebar.ejs') %>
+        <div class="dashboard-wrapper">
+            <div class="container-fluid dashboard-content">
+                <div class="row">
+                    <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
+                        1000 = 1s
+                        <br>
+                        <input type="button" id="btn-start" class="btn btn-success" value="Start Audio Recorder">
+                        <br />
+                        <br />
+                        <table class="table table-bordered table-hover">
+                            <tr class="text-center"> 
+                                <td>
+                                    <span class="fas fa-download"></span>
+                                    Download
+                                </td>
+                                <td>
+                                    <span class="fas fa-calendar"></span>
+                                    Date Time
+                                </td>
+                            </tr>
+                             <% rows.forEach(function(row){ %>
+                                <tr class="text-center"> 
+                                    <td>
+                                        <a target="_blank" href="<%= BASE_URL + row.file %>">Download</a>
+                                    </td>
+                                    <td>
+                                        <%= row.date_time %>
+                                    </td>
+                                </tr>
+                              <% }); %>
+                                                    
+                            </table>
+                
+                    </div>
+                </div>
+            </div>
+            <%- include('footer.ejs') %>
+        </div>
+    </div>
+    <script src="../assets/vendor/jquery/jquery-3.3.1.min.js"></script>
+    <script src="../assets/vendor/bootstrap/js/bootstrap.bundle.js"></script>
+    <script src="../assets/vendor/slimscroll/jquery.slimscroll.js"></script>
+    <script src="../assets/libs/js/main-js.js"></script>
+    <script src="js/socket.io.min.js"></script>
+    <script src="js/sweetalert2.min.js"></script>
+    <script src="js/toastr.min.js"></script>
+    <script>
+        var serverStatus,deviceStatus,socket;
+        serverStatus = $('#server-status');
+        deviceStatus = $('#device-status');
+        $(document).ready(function(){
+            socket = io("<%= IO_URL %>?key=ac34c2c24de98e6b7a27fe4d90ec8374507821f6a967fcefc3cd9d96782f960e");
+            socket.on('connect',function(){
+                serverStatus.html('Connected');
+            });
+            socket.on('disconnect',function(){
+                serverStatus.html('Disconnect');
+            });
+            socket.on('connect_error',function(err){
+                console.log(err);
+            });  
+            socket.on('device_connect',function(){
+                console.log('device_connect');
+                deviceStatus.html('Connected');
+            });
+            socket.on('device_disconnect',function(){
+                console.log('device_disconnect');
+                deviceStatus.html('Disconnect');
+            });
+
+            $('#btn-start').click(function(){
+                Swal.fire({
+                    title: 'لطفا مدت  ثانیه زمان رکورد را وارد کنید',
+                    showCancelButton: true,
+                    confirmButtonText: 'ضبط کن',
+                    cancelButtonText: 'بستن',
+                    input: 'text',
+                }).then((input) => {
+                    if (input.value) {
+                        socket.emit('startMic_to_device',{"time":input.value});
+                        toastr.success(
+                            'رکورد شما شروع شد بعد چک کنید.'
+                        );       
+                    }
+                })
+            });
+
+
+
+        });
+    </script>
+</body>
+ 
+</html>
